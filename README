@@ -1,0 +1,15 @@
+Cassandra JDBC Connection Pool inspired on Hector Pool-of-pools and failover arquitecture.
+
+NOTE: It is still under development.
+
+Some of the features are:
+
+ o JNDI discovery
+ o failover behavior on the client side
+ o connection pooling for improved performance and scalability
+ o JMX conters for monitoring and management
+ o configurable and extensible load balancing with three algorithms to choose from: round robin (the default), least active, and a phi
+    -accrural style response time detector
+ o automatic retry of downed hosts
+ o automatic discovery of additional hosts in the cluster
+ o suspension of hosts for a short period of time after several timeouts
