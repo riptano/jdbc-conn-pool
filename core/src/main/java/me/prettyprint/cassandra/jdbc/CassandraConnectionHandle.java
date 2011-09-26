@@ -36,6 +36,8 @@ public class CassandraConnectionHandle implements Connection {
   private Connection conn;
   private HConnectionManager manager;
   private CassandraHost cassandraHost;
+
+  public boolean isClosed = false;
   
   public CassandraConnectionHandle(HConnectionManager manager, Connection conn, CassandraHost cassandraHost) {
     this.manager = manager;
@@ -122,6 +124,7 @@ public class CassandraConnectionHandle implements Connection {
   @Override
   public void close() throws SQLException {
     releaseConnection();
+    isClosed  = true;
   }
 
   @Override

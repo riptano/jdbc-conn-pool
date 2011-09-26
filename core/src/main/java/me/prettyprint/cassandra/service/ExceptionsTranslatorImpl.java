@@ -86,7 +86,7 @@ public final class ExceptionsTranslatorImpl implements ExceptionsTranslator {
   }
 
   @Override
-  public boolean isPoolExhausted(Throwable originalException) {
+  public boolean hasTimedout(Throwable originalException) {
     Throwable ex = originalException.getCause();
     if (ex == null) 
       return false;
@@ -99,13 +99,10 @@ public final class ExceptionsTranslatorImpl implements ExceptionsTranslator {
   }
 
   @Override
-  public boolean hasTimedout(Throwable originalException) {
-    Throwable ex = originalException.getCause();
-    if (ex == null) 
-      return false;
-    if (ex instanceof PoolExhaustedException)
+  public boolean isPoolExhausted(Throwable originalException) {
+    if (originalException instanceof PoolExhaustedException)
       return true;
-    if (ex instanceof NoSuchElementException)
+    if (originalException instanceof NoSuchElementException)
       return true;
 
     return false;

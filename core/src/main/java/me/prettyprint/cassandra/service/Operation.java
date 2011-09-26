@@ -4,13 +4,12 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Map;
 
-import me.prettyprint.cassandra.connection.CassandraHost;
 import me.prettyprint.cassandra.connection.CassandraClientMonitor.Counter;
+import me.prettyprint.cassandra.connection.CassandraHost;
+import me.prettyprint.cassandra.jdbc.CassandraStatementHandle;
 import me.prettyprint.cassandra.model.ExecutionResult;
 import me.prettyprint.hector.api.ConsistencyLevelPolicy;
 import me.prettyprint.hector.api.exceptions.HectorException;
-
-import org.apache.cassandra.thrift.Cassandra;
 
 /**
  * Defines an operation performed on cassandra
@@ -22,7 +21,6 @@ import org.apache.cassandra.thrift.Cassandra;
  *          Oh closures, how I wish you were here...
  */
 public abstract class Operation<T> {
-  private static final Map<String, String> EMPTY_CREDENTIALS = Collections.emptyMap();
 
   /** Counts failed attempts */
   public final Counter failCounter;
@@ -42,12 +40,14 @@ public abstract class Operation<T> {
   private CassandraHost cassandraHost;
   protected long execTime;
   public final OperationType operationType;
+  public CassandraStatementHandle cassandraStatement;
   
-  public Operation(OperationType operationType) {
+  public Operation(OperationType operationType, CassandraStatementHandle statement) {
     this.failCounter = operationType.equals(OperationType.READ) ? Counter.READ_FAIL :
       Counter.WRITE_FAIL;
     this.operationType = operationType;
     this.stopWatchTagName = operationType.name();
+    this.cassandraStatement = statement;
   }
   
   
@@ -97,12 +97,12 @@ public abstract class Operation<T> {
   /**
    * Performs the operation on the given cassandra instance.
    */
-  public abstract T execute(Cassandra.Client cassandra) throws SQLException;
+  public abstract T execute() throws SQLException;
 
-  public void executeAndSetResult(Cassandra.Client cassandra, CassandraHost cassandraHost) throws SQLException {
+  public void executeAndSetResult(CassandraHost cassandraHost) throws SQLException {
     this.cassandraHost = cassandraHost;
     long startTime = System.nanoTime();
-    setResult(execute(cassandra));
+    setResult(execute());
     execTime = System.nanoTime() - startTime;
   }
 

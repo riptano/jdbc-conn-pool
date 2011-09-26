@@ -1,5 +1,7 @@
 package me.prettyprint.cassandra.connection;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -212,26 +214,30 @@ public class HConnectionManager {
   public void operateWithFailover(Operation<?> op) throws HectorException {
     final Object timerToken = timer.start(); 
     int retries = Math.min(op.failoverPolicy.numRetries, hostPools.size());
-    HThriftClient client = null;
     HClientPool pool = null;
     boolean success = false;
     boolean retryable = false;
+    CassandraConnectionHandle currentConnection = null;
     Set<CassandraHost> excludeHosts = new HashSet<CassandraHost>(); // HLT.getExcludedHosts() (will be empty most times)
     // TODO start timer for limiting retry time spent
+
     while ( !success ) {
+
       try {
-        // TODO (patricioe) For CQL, we need to move this logic after the "execute" as the client already has a connection
-        
-        // TODO how to 'timeout' on this op when underlying pool is exhausted
-        pool = getClientFromLBPolicy(excludeHosts);
-        client = pool.borrowClient();
-        Cassandra.Client c = client.getCassandra(op.keyspaceName);
-        // Keyspace can be null for some system_* api calls
-        if ( op.credentials != null && !op.credentials.isEmpty() ) {
-          c.login(new AuthenticationRequest(op.credentials));
+
+        // Let's not borrow a connection the first time. JDBC is connection driven. It should be set already.
+        if (currentConnection != null) {
+          // Try a new host/connection
+          pool = getClientFromLBPolicy(excludeHosts);
+          CassandraConnectionHandle newConn = (CassandraConnectionHandle) pool.borrowClient();
+          // Set the new connection
+          op.cassandraStatement.cassandraConnectionHandle = newConn;
         }
 
-        op.executeAndSetResult(c, pool.getCassandraHost());
+        // Keep the current connection in case we need to do a failover and have to close it later.
+        currentConnection = op.cassandraStatement.cassandraConnectionHandle;
+
+        op.executeAndSetResult(pool.getCassandraHost());
         success = true;
         timer.stop(timerToken, op.stopWatchTagName, true);
         break;
@@ -251,15 +257,15 @@ public class HConnectionManager {
           retryable = true;
 
           monitor.incCounter(Counter.RECOVERABLE_TIMED_OUT_EXCEPTIONS);
-          client.close();
+          currentConnection.close();
           // TODO timecheck on how long we've been waiting on timeouts here
           // suggestion per user moores on hector-users
 
         } else if (exceptionsTranslator.isATransportError(ex)) {
 
           // client can be null in this situation
-          if ( client != null ) {
-            client.close();
+          if ( currentConnection != null ) {
+            currentConnection.close();
           }
 
           markHostAsDown(pool.getCassandraHost());
@@ -286,7 +292,7 @@ public class HConnectionManager {
 
         if ( retries <= 0 || retryable == false) throw he;
 
-        log.warn("Could not fullfill request on this host {}", client);
+        log.warn("Could not fullfill request on this host {}", pool.getCassandraHost());
         log.warn("Exception: ", ex);
         monitor.incCounter(Counter.SKIP_HOST_SUCCESS);
         sleepBetweenHostSkips(op.failoverPolicy);
@@ -297,7 +303,7 @@ public class HConnectionManager {
           monitor.incCounter(op.failCounter);
           timer.stop(timerToken, op.stopWatchTagName, false);
         }
-        releaseClient(client);
+        releaseClient(currentConnection);
       }
     }
   }
@@ -353,7 +359,9 @@ public class HConnectionManager {
   }
 
   public void releaseClient(CassandraConnectionHandle connectionHandle) {
-    if ( connectionHandle == null ) return;
+    if (connectionHandle == null ) return;
+    if (connectionHandle.isClosed) return;
+
     HClientPool pool = hostPools.get(connectionHandle.getCassandraHost());
     if ( pool == null ) {
       pool = suspendedHostPools.get(connectionHandle.getCassandraHost());
@@ -361,8 +369,17 @@ public class HConnectionManager {
     if ( pool != null ) {
       pool.releaseClient(connectionHandle.getInternalConnection());
     } else {
-      log.info("Client {} released to inactive or dead pool. Closing.", client);
-      client.close();
+      log.info("Client {} released to inactive or dead pool. Closing.", connectionHandle.getCassandraHost());
+      closeQuietly(connectionHandle);
+    }
+    connectionHandle.isClosed = true;
+  }
+
+  private void closeQuietly(CassandraConnectionHandle connectionHandle) {
+    try {
+      connectionHandle.getInternalConnection().close();
+    } catch (SQLException e) {
+      log.info("Unexpected error while closing the connection: " + connectionHandle.getCassandraHost());
     }
   }
 
