@@ -34,7 +34,11 @@ public class CassandraStatementHandle implements Statement {
    * Performs the operation on the given cassandra instance.
    */
   public void execute(Operation<?> op) throws SQLException {
-    manager.operateWithFailover(op);
+    try {
+      manager.operateWithFailover(op);
+    } catch (SQLException e) {
+      throw this.cassandraConnectionHandle.markPossiblyBroken(e);
+    }
   }
 
   @Override
@@ -193,7 +197,7 @@ public class CassandraStatementHandle implements Statement {
    * @throws SQLException
    *             on error
    */
-  private void checkClosed() throws SQLException {
+  protected void checkClosed() throws SQLException {
     if (this.cassandraConnectionHandle.isClosed()) {
       throw new SQLException("Connection is closed!");
     }
