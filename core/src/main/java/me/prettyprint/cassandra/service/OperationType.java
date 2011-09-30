@@ -14,5 +14,7 @@ public enum OperationType {
   /** Meta read operations, such as describe*() */
   META_READ,
   /** Operation on one of the system_ methods */
-  META_WRITE;
+  META_WRITE,
+  /** a CQL operation */
+  CQL;
 }
