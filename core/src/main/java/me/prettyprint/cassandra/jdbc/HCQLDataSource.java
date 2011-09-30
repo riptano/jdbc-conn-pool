@@ -3,6 +3,7 @@ package me.prettyprint.cassandra.jdbc;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.Hashtable;
 
 import javax.naming.Context;
@@ -145,8 +146,7 @@ public class HCQLDataSource implements DataSource, ObjectFactory {
      * @see javax.sql.DataSource#getConnection()
      */
     public Connection getConnection() throws SQLException {
-        return this.cluster.getConnectionManager().;
-        //return null;
+        return this.cluster.getConnectionManager().borrowClient();
     }
 
     /**
@@ -165,8 +165,7 @@ public class HCQLDataSource implements DataSource, ObjectFactory {
      *      java.lang.String)
      */
     public Connection getConnection(String username, String password) throws SQLException {
-        //return this.multiDataSource.get(new UsernamePassword(username, password)).getConnection();
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
     /**

@@ -1,5 +1,6 @@
 package me.prettyprint.cassandra.connection;
 
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -117,7 +118,7 @@ public class DynamicLoadBalancingPolicy implements LoadBalancingPolicy {
   }
 
   @Override
-  public HClientPool createConnection(CassandraHost host) {
+  public HClientPool createConnection(CassandraHost host) throws SQLException {
     LatencyAwareHClientPool pool = new LatencyAwareHClientPool(host);
     add(pool);
     return pool;

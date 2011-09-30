@@ -1,6 +1,7 @@
 package me.prettyprint.cassandra.connection;
 
 import java.io.Serializable;
+import java.sql.SQLFeatureNotSupportedException;
 
 import me.prettyprint.cassandra.service.ExhaustedPolicy;
 import me.prettyprint.hector.api.ClockResolution;
@@ -24,13 +25,19 @@ public final class CassandraHostConfigurator implements Serializable {
   private long maxWaitTimeWhenExhausted = CassandraHost.DEFAULT_MAX_WAITTIME_WHEN_EXHAUSTED;
   private int cassandraThriftSocketTimeout;
   private ExhaustedPolicy exhaustedPolicy;
-  private ClockResolution clockResolution = DEF_CLOCK_RESOLUTION;
   private boolean useThriftFramedTransport = CassandraHost.DEFAULT_USE_FRAMED_THRIFT_TRANSPORT;
-  private boolean retryDownedHosts = true;
+
+  // Discovery new hosts service.
+  // TODO (patricioe) Cassandra does not support yet system calls. This feature uses describe_ring. CASSANDRA-2477
   private boolean autoDiscoverHosts = false;
+  private int autoDiscoveryDelayInSeconds = NodeAutoDiscoverService.DEF_AUTO_DISCOVERY_DELAY;
+  private boolean runAutoDiscoveryAtStartup = false;
+
+  // Retry Down Host Service
+  private boolean retryDownedHosts = true;
   private int retryDownedHostsQueueSize = CassandraHostRetryService.DEF_QUEUE_SIZE;
   private int retryDownedHostsDelayInSeconds = CassandraHostRetryService.DEF_RETRY_DELAY;
-  private int autoDiscoveryDelayInSeconds = NodeAutoDiscoverService.DEF_AUTO_DISCOVERY_DELAY;
+  
   private LoadBalancingPolicy loadBalancingPolicy = new RoundRobinBalancingPolicy();
   public static final ClockResolution DEF_CLOCK_RESOLUTION = HFactory.createClockResolution(ClockResolution.MICROSECONDS_SYNC);
   private int hostTimeoutCounter = HostTimeoutTracker.DEF_TIMEOUT_COUNTER;
@@ -38,7 +45,7 @@ public final class CassandraHostConfigurator implements Serializable {
   private int hostTimeoutSuspensionDurationInSeconds = HostTimeoutTracker.DEF_NODE_SUSPENSION_DURATION_IN_SECONDS;
   private int hostTimeoutUnsuspendCheckDelay = HostTimeoutTracker.DEF_NODE_UNSUSPEND_CHECK_DELAY_IN_SECONDS;
   private boolean useHostTimeoutTracker = false;
-  private boolean runAutoDiscoveryAtStartup = false;
+
   private boolean useSocketKeepalive = false;
   private HOpTimer opTimer = new NullOpTimer();
 
@@ -139,13 +146,6 @@ public final class CassandraHostConfigurator implements Serializable {
     return retryDownedHostsDelayInSeconds;
   }
 
-  /**
-   * @param resolutionString one of "SECONDS", "MILLISECONDS", "MICROSECONDS" or "MICROSECONDS_SYNC"
-   */
-  public void setClockResolution(String resolutionString) {
-    clockResolution = HFactory.createClockResolution(resolutionString);
-  }
-
   public HOpTimer getOpTimer() {
 	  return opTimer;
   }
@@ -159,7 +159,6 @@ public final class CassandraHostConfigurator implements Serializable {
     StringBuilder s = new StringBuilder();
     s.append("CassandraHostConfigurator<");
     s.append("clockResolution=");
-    s.append(clockResolution);
     s.append("&exhaustedPolicy=");
     s.append(exhaustedPolicy);
     s.append("&cassandraThriftSocketTimeout=");
@@ -224,14 +223,7 @@ public final class CassandraHostConfigurator implements Serializable {
     this.useThriftFramedTransport = useThriftFramedTransport;
   }
 
-  public ClockResolution getClockResolution() {
-    return clockResolution;
-  }
-
-  public void setClockResolution(ClockResolution clockResolution) {
-    this.clockResolution = clockResolution;
-  }
-
+  /*
   public boolean getAutoDiscoverHosts() {
     return autoDiscoverHosts;
   }
@@ -247,6 +239,7 @@ public final class CassandraHostConfigurator implements Serializable {
   public void setAutoDiscoveryDelayInSeconds(int autoDiscoveryDelayInSeconds) {
     this.autoDiscoveryDelayInSeconds = autoDiscoveryDelayInSeconds;
   }
+*/
 
   public LoadBalancingPolicy getLoadBalancingPolicy() {
     return loadBalancingPolicy;

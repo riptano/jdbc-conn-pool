@@ -1,12 +1,17 @@
 package me.prettyprint.cassandra.connection;
 
 
-import java.util.*;
+import java.sql.SQLException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 /**
@@ -54,7 +59,7 @@ public class LeastActiveBalancingPolicy implements LoadBalancingPolicy {
   }
   
   @Override
-  public HClientPool createConnection(CassandraHost host) {
+  public HClientPool createConnection(CassandraHost host) throws SQLException {
 	  return new ConcurrentHClientPool(host);
   }
 }

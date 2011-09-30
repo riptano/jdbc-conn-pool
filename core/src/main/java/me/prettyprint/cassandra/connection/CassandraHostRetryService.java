@@ -1,5 +1,7 @@
 package me.prettyprint.cassandra.connection;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -7,8 +9,7 @@ import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import me.prettyprint.hector.api.exceptions.HectorTransportException;
-
+import org.apache.cassandra.cql.jdbc.CassandraDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,25 +119,38 @@ public class CassandraHostRetryService extends BackgroundCassandraHostService {
     }
   }
 
-  
+
   private boolean verifyConnection(CassandraHost cassandraHost) {
     if ( cassandraHost == null ) {
       return false;
     }
+
     boolean found = false;
-    HThriftClient client = new HThriftClient(cassandraHost);
+    CassandraDataSource ds = new CassandraDataSource(cassandraHost.getHost(),
+                                                     cassandraHost.getPort(),
+                                                     cassandraHost.getKeyspaceName(),
+                                                     cassandraHost.getUser(),
+                                                     cassandraHost.getPassword());
+    Connection conn = null;
     try {
-      
-      client.open();
-      found = client.getCassandra().describe_cluster_name() != null;
-      client.close();              
-    } catch (HectorTransportException he) {        
-      log.warn("Downed {} host still appears to be down: {}", cassandraHost, he.getMessage());
-    } catch (Exception ex) {
-              
-      log.error("Downed Host retry failed attempt to verify CassandraHost", ex);
-      
-    } 
+      conn = ds.getConnection();
+      // May be add some queries
+    } catch (SQLException e) {
+      if (log.isDebugEnabled()) {
+        log.debug("Downed {} host still appears to be down: {}", cassandraHost, e);
+      } else {
+        log.info("Downed {} host still appears to be down: {}", cassandraHost, e.getMessage());
+      }
+    } finally {
+      try {
+        conn.close();
+      } catch (Exception e) { 
+          // Ignoring this. Nothing we can do.
+      }
+    }
+
+    ds = null;
+    conn = null;
     return found;
   }
 }

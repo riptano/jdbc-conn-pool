@@ -1,14 +1,12 @@
 package me.prettyprint.cassandra.connection;
 
+import java.sql.SQLException;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import me.prettyprint.hector.api.Keyspace;
+import me.prettyprint.cassandra.jdbc.CassandraConnectionHandle;
 
-import org.apache.cassandra.thrift.KsDef;
-import org.apache.cassandra.thrift.TokenRange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +21,7 @@ public class NodeAutoDiscoverService extends BackgroundCassandraHostService {
   public NodeAutoDiscoverService(HConnectionManager connectionManager,
       CassandraHostConfigurator cassandraHostConfigurator) {
     super(connectionManager, cassandraHostConfigurator);
-    this.retryDelayInSeconds = cassandraHostConfigurator.getAutoDiscoveryDelayInSeconds();
+    //this.retryDelayInSeconds = cassandraHostConfigurator.getAutoDiscoveryDelayInSeconds();
     sf = executor.scheduleWithFixedDelay(new QueryRing(), retryDelayInSeconds,retryDelayInSeconds, TimeUnit.SECONDS);
   }
 
@@ -75,11 +73,11 @@ public class NodeAutoDiscoverService extends BackgroundCassandraHostService {
     Set<CassandraHost> existingHosts = connectionManager.getHosts();
     Set<CassandraHost> foundHosts = new HashSet<CassandraHost>();
 
-    HThriftClient thriftClient = null;
+    CassandraConnectionHandle conn  = null;
     log.info("using existing hosts {}", existingHosts);
     try {
-      thriftClient = connectionManager.borrowClient();
-
+      conn = connectionManager.borrowClient();
+      /*
       for (KsDef keyspace : thriftClient.getCassandra().describe_keyspaces()) {
         if (!keyspace.getName().equals(Keyspace.KEYSPACE_SYSTEM)) {
           List<TokenRange> tokenRanges = thriftClient.getCassandra().describe_ring(keyspace.getName());
@@ -95,10 +93,15 @@ public class NodeAutoDiscoverService extends BackgroundCassandraHostService {
           break;
         }
       }
+      */
     } catch (Exception e) {
-      log.error("Discovery Service failed attempt to connect CassandraHost", e);
+      log.error("Discovery Service failed attempt to connect", e);
     } finally {
-      connectionManager.releaseClient(thriftClient);
+      try {
+        connectionManager.releaseClient(conn);
+      } catch (SQLException e) {
+        log.error("Discovery Service failed at releasing a connection", e);
+      }
     }
     return foundHosts;
   }

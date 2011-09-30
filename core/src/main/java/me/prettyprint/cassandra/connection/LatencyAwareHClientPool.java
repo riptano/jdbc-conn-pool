@@ -1,9 +1,10 @@
 package me.prettyprint.cassandra.connection;
 
+import java.sql.SQLException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import me.prettyprint.hector.api.exceptions.HectorException;
+import me.prettyprint.cassandra.jdbc.CassandraConnectionHandle;
 
 /**
  * This class provides a queue function of latencies over CHCP, collecting all the latency information and calculates
@@ -19,20 +20,20 @@ public class LatencyAwareHClientPool extends ConcurrentHClientPool {
   private static final double SENTINEL_COMPARE = 0.768;
   private final LinkedBlockingDeque<Double> latencies;
 
-  public LatencyAwareHClientPool(CassandraHost host) {
+  public LatencyAwareHClientPool(CassandraHost host) throws SQLException {
     super(host);
     latencies = new LinkedBlockingDeque<Double>(WINDOW_QUEUE_SIZE);
   }
 
   @Override
-  public HThriftClient borrowClient() throws HectorException {
-    HThriftClient client = super.borrowClient();
-    client.startToUse();
-    return client;
+  public CassandraConnectionHandle borrowClient() throws SQLException {
+    CassandraConnectionHandle conn = super.borrowClient();
+    conn.startToUse();
+    return conn;
   }
 
   @Override
-  public void releaseClient(HThriftClient client) throws HectorException {
+  public void releaseClient(CassandraConnectionHandle client) throws SQLException {
     add(client.getSinceLastUsed());
     super.releaseClient(client);
   }

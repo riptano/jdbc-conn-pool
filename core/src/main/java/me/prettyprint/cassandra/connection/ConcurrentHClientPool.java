@@ -1,6 +1,5 @@
 package me.prettyprint.cassandra.connection;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
@@ -9,8 +8,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import me.prettyprint.cassandra.jdbc.CassandraConnectionHandle;
 import me.prettyprint.hector.api.exceptions.HectorException;
-import me.prettyprint.hector.api.exceptions.HectorTransportException;
 import me.prettyprint.hector.api.exceptions.PoolExhaustedException;
 
 import org.apache.cassandra.cql.jdbc.CassandraDataSource;
@@ -21,7 +20,7 @@ public class ConcurrentHClientPool implements HClientPool {
 
   private static final Logger log = LoggerFactory.getLogger(ConcurrentHClientPool.class);
 
-  private final ArrayBlockingQueue<Connection> availableConnectionQueue;
+  private final ArrayBlockingQueue<CassandraConnectionHandle> availableConnectionQueue;
   private final AtomicInteger activeConnectionCount;
   private final AtomicInteger realActiveConnectionCount;
 
@@ -34,12 +33,12 @@ public class ConcurrentHClientPool implements HClientPool {
 
   private final long maxWaitTimeWhenExhausted;
 
-  public ConcurrentHClientPool(CassandraHost host) {
+  public ConcurrentHClientPool(CassandraHost host) throws SQLException {
     this.cassandraHost = host;
     ds = new CassandraDataSource(cassandraHost.getHost(), cassandraHost.getPort(), cassandraHost.getKeyspaceName(),
             cassandraHost.getUser(), cassandraHost.getPassword());
 
-    availableConnectionQueue = new ArrayBlockingQueue<Connection>(cassandraHost.getMaxActive(), true);
+    availableConnectionQueue = new ArrayBlockingQueue<CassandraConnectionHandle>(cassandraHost.getMaxActive(), true);
     // This counter can be offset by as much as the number of threads.
     activeConnectionCount = new AtomicInteger(0);
     realActiveConnectionCount = new AtomicInteger(0);
@@ -62,12 +61,12 @@ public class ConcurrentHClientPool implements HClientPool {
 
 
   @Override
-  public Connection borrowClient() {
+  public CassandraConnectionHandle borrowClient() throws SQLException {
     if ( !active.get() ) {
       throw new HectorException("Attempt to borrow on in-active pool: " + getName());
     }
 
-    Connection conn = availableConnectionQueue.poll();
+    CassandraConnectionHandle conn = availableConnectionQueue.poll();
     int currentActiveClients = activeConnectionCount.incrementAndGet();
 
     try {
@@ -96,8 +95,8 @@ public class ConcurrentHClientPool implements HClientPool {
   }
 
 
-  private Connection waitForConnection() {
-    Connection conn = null;
+  private CassandraConnectionHandle waitForConnection() {
+    CassandraConnectionHandle conn = null;
     numBlocked.incrementAndGet();
 
     // blocked take on the queue if we are configured to wait forever
@@ -147,16 +146,15 @@ public class ConcurrentHClientPool implements HClientPool {
    * @return
  * @throws SQLException 
    */
-  private Connection createConnection() {
+  private CassandraConnectionHandle createConnection() throws SQLException {
     if ( log.isDebugEnabled() ) {
       log.debug("Creation of new connection");
     }
     try {
-      return ds.getConnection(cassandraHost.getUser(), cassandraHost.getPassword());
+      return new CassandraConnectionHandle(ds.getConnection(cassandraHost.getUser(), cassandraHost.getPassword()), cassandraHost);
     } catch (SQLException e) {
       log.debug("Unable to open transport to " + cassandraHost.getName());
-      throw new HectorTransportException("Unable to open transport to " + cassandraHost.getName() +" , " +
-          e.getLocalizedMessage(), e);
+      throw e;
     }
   }
 
@@ -174,19 +172,19 @@ public class ConcurrentHClientPool implements HClientPool {
       throw new IllegalArgumentException("shutdown() called for inactive pool: " + getName());
     }
     log.info("Shutdown triggered on {}", getName());
-    Set<Connection> connections = new HashSet<Connection>();
+    Set<CassandraConnectionHandle> connections = new HashSet<CassandraConnectionHandle>();
     availableConnectionQueue.drainTo(connections);
     if ( connections.size() > 0 ) {
-      for (Connection conn : connections) {
+      for (CassandraConnectionHandle conn : connections) {
         closeConnection(conn);
       }
     }
     log.info("Shutdown complete on {}", getName());
   }
 
-  private void closeConnection(Connection conn) {
+  private void closeConnection(CassandraConnectionHandle conn) {
     try {
-      conn.close();
+      conn.getInternalConnection().close();
     } catch (SQLException e) {
       log.error("Error closgin connection for: " + cassandraHost.getHost());
     }
@@ -249,7 +247,7 @@ public int getNumBeforeExhausted() {
   }
 
   @Override
-  public void releaseClient(Connection conn) {
+  public void releaseClient(CassandraConnectionHandle conn) throws SQLException {
     boolean open;
     try {
       open = !conn.isClosed();
@@ -266,7 +264,11 @@ public int getNumBeforeExhausted() {
         closeConnection(conn);
       }
     } else {
-      addClientToPoolGently(createConnection());
+      try {
+        addClientToPoolGently(createConnection());
+      } catch (SQLException e) {
+        log.info("Unable to reopen a connection. Bad server. Message: " + e.getMessage());
+      }
     }
 
     realActiveConnectionCount.decrementAndGet();
@@ -283,7 +285,7 @@ public int getNumBeforeExhausted() {
    * are releasing at the same time).
    * @param conn Connection
    */
-  private void addClientToPoolGently(Connection conn) {
+  private void addClientToPoolGently(CassandraConnectionHandle conn) {
     try {
       availableConnectionQueue.add(conn);
     } catch (IllegalStateException ise) {

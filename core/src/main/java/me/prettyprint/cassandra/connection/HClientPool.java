@@ -1,19 +1,16 @@
 package me.prettyprint.cassandra.connection;
 
-import java.sql.Connection;
+import java.sql.SQLException;
 
-/**
- * Main interface for Cassandra Pool.
- */
-import me.prettyprint.hector.api.exceptions.HectorException;
+import me.prettyprint.cassandra.jdbc.CassandraConnectionHandle;
 
 public interface HClientPool extends PoolMetric {
-  public Connection borrowClient() throws HectorException;
+  public CassandraConnectionHandle borrowClient() throws SQLException;
   public CassandraHost getCassandraHost();
   public int getNumBeforeExhausted();
   public boolean isExhausted();
   public int getMaxActive();
   public String getStatusAsString();
-  public void releaseClient(Connection conn) throws HectorException;
+  public void releaseClient(CassandraConnectionHandle conn) throws SQLException;
   void shutdown();
 }

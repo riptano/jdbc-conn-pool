@@ -1,9 +1,8 @@
 package me.prettyprint.cassandra.connection;
 
+import java.sql.SQLException;
 import java.util.Collection;
-import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.Iterables;
 
@@ -63,7 +62,7 @@ public class RoundRobinBalancingPolicy implements LoadBalancingPolicy {
   }
 
   @Override
-  public HClientPool createConnection(CassandraHost host) {
+  public HClientPool createConnection(CassandraHost host) throws SQLException {
   	return new ConcurrentHClientPool(host);
   }
 }

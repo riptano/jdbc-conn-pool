@@ -7,7 +7,6 @@ import static me.prettyprint.hector.api.ddl.ComparatorType.COMPOSITETYPE;
 
 import java.nio.ByteBuffer;
 
-import me.prettyprint.hector.api.beans.Composite;
 import me.prettyprint.hector.api.ddl.ComparatorType;
 
 /**

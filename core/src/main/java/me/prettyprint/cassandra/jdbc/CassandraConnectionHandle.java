@@ -36,11 +36,25 @@ public class CassandraConnectionHandle implements Connection {
   private Connection conn;
   private HConnectionManager manager;
   private CassandraHost cassandraHost;
+  private long useageStartTime;
 
   public boolean isClosed = false;
   
   public CassandraConnectionHandle(HConnectionManager manager, Connection conn, CassandraHost cassandraHost) {
     this.manager = manager;
+    this.conn = conn;
+    this.cassandraHost = cassandraHost;
+  }
+  
+  public HConnectionManager getManager() {
+    return manager;
+  }
+
+  public void setManager(HConnectionManager manager) {
+    this.manager = manager;
+  }
+
+  public CassandraConnectionHandle(Connection conn, CassandraHost cassandraHost) {
     this.conn = conn;
     this.cassandraHost = cassandraHost;
   }
@@ -57,6 +71,17 @@ public class CassandraConnectionHandle implements Connection {
     } catch (SQLException e1) {
       logger.warn("connection.isClosed() threw Ex. Ignoring it.");
     }
+  }
+  
+  public void startToUse() {
+    useageStartTime = System.currentTimeMillis();
+  }
+
+  /**
+   * @return Time in MS since it was used.
+   */
+  public long getSinceLastUsed() {
+    return System.currentTimeMillis() - useageStartTime;
   }
   
   /**
