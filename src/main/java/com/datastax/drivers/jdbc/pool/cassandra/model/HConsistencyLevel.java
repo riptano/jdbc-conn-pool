@@ -1,4 +1,4 @@
-package com.datastax.drivers.jdbc.pool.cassandra;
+package com.datastax.drivers.jdbc.pool.cassandra.model;
 
 /**
  * This is the Hector consistency level which is just a mirror of the thrift or avro consistency

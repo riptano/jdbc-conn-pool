@@ -3,10 +3,10 @@ package com.datastax.drivers.jdbc.pool.cassandra.factory;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.datastax.drivers.jdbc.pool.cassandra.ConsistencyLevelPolicy;
 import com.datastax.drivers.jdbc.pool.cassandra.connection.CassandraHostConfigurator;
 import com.datastax.drivers.jdbc.pool.cassandra.connection.Cluster;
 import com.datastax.drivers.jdbc.pool.cassandra.connection.ThriftCluster;
+import com.datastax.drivers.jdbc.pool.cassandra.model.ConsistencyLevelPolicy;
 import com.datastax.drivers.jdbc.pool.cassandra.model.QuorumAllConsistencyLevelPolicy;
 
 

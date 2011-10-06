@@ -4,12 +4,12 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Map;
 
-import com.datastax.drivers.jdbc.pool.cassandra.ConsistencyLevelPolicy;
 import com.datastax.drivers.jdbc.pool.cassandra.connection.CassandraHost;
 import com.datastax.drivers.jdbc.pool.cassandra.connection.CassandraClientMonitor.Counter;
 import com.datastax.drivers.jdbc.pool.cassandra.exceptions.HectorException;
 import com.datastax.drivers.jdbc.pool.cassandra.jdbc.CassandraConnectionHandle;
 import com.datastax.drivers.jdbc.pool.cassandra.jdbc.CassandraStatementHandle;
+import com.datastax.drivers.jdbc.pool.cassandra.model.ConsistencyLevelPolicy;
 import com.datastax.drivers.jdbc.pool.cassandra.model.ExecutionResult;
 
 

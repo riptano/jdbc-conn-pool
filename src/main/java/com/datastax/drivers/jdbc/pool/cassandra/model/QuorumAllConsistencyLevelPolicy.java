@@ -1,7 +1,5 @@
 package com.datastax.drivers.jdbc.pool.cassandra.model;
 
-import com.datastax.drivers.jdbc.pool.cassandra.ConsistencyLevelPolicy;
-import com.datastax.drivers.jdbc.pool.cassandra.HConsistencyLevel;
 import com.datastax.drivers.jdbc.pool.cassandra.service.OperationType;
 
 /**

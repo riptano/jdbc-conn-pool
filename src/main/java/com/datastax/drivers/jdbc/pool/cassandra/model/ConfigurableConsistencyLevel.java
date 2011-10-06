@@ -7,8 +7,6 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.drivers.jdbc.pool.cassandra.ConsistencyLevelPolicy;
-import com.datastax.drivers.jdbc.pool.cassandra.HConsistencyLevel;
 import com.datastax.drivers.jdbc.pool.cassandra.service.OperationType;
 
 /**

@@ -1,6 +1,7 @@
 package com.datastax.drivers.jdbc.pool.cassandra;
 
 import com.datastax.drivers.jdbc.pool.cassandra.exceptions.HectorException;
+import com.datastax.drivers.jdbc.pool.cassandra.model.ConsistencyLevelPolicy;
 import com.datastax.drivers.jdbc.pool.cassandra.service.Operation;
 
 
