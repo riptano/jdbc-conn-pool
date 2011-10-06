@@ -1,7 +1,6 @@
 package com.datastax.drivers.jdbc.pool.cassandra.connection;
 
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -11,11 +10,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.drivers.jdbc.pool.cassandra.ClockResolution;
 import com.datastax.drivers.jdbc.pool.cassandra.connection.CassandraClientMonitor.Counter;
 import com.datastax.drivers.jdbc.pool.cassandra.exceptions.HectorException;
 import com.datastax.drivers.jdbc.pool.cassandra.jdbc.CassandraConnectionHandle;

@@ -3,16 +3,11 @@ package com.datastax.drivers.jdbc.pool.cassandra.factory;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.datastax.drivers.jdbc.pool.cassandra.ClockResolution;
 import com.datastax.drivers.jdbc.pool.cassandra.ConsistencyLevelPolicy;
 import com.datastax.drivers.jdbc.pool.cassandra.connection.CassandraHostConfigurator;
 import com.datastax.drivers.jdbc.pool.cassandra.connection.Cluster;
 import com.datastax.drivers.jdbc.pool.cassandra.connection.ThriftCluster;
 import com.datastax.drivers.jdbc.pool.cassandra.model.QuorumAllConsistencyLevelPolicy;
-import com.datastax.drivers.jdbc.pool.cassandra.service.clock.MicrosecondsClockResolution;
-import com.datastax.drivers.jdbc.pool.cassandra.service.clock.MicrosecondsSyncClockResolution;
-import com.datastax.drivers.jdbc.pool.cassandra.service.clock.MillisecondsClockResolution;
-import com.datastax.drivers.jdbc.pool.cassandra.service.clock.SecondsClockResolution;
 
 
 
@@ -151,39 +146,5 @@ public final class HFactory {
     return DEFAULT_CONSISTENCY_LEVEL_POLICY;
   }
 
-  /**
-   * Creates a clock of now with the default clock resolution (micorosec) as
-   * defined in {@link CassandraHostConfigurator}. Notice that this is a
-   * convenient method. Be aware that there might be multiple
-   * {@link CassandraHostConfigurator} each of them with different clock
-   * resolutions, in which case the result of {@link HFactory.createClock} will
-   * not be consistent. {@link Keyspace.createClock()} should be used instead.
-   */
-  public static long createClock() {
-    return CassandraHostConfigurator.DEF_CLOCK_RESOLUTION.createClock();
-  }
-
-
-  /**
-   * Create a clock resolution based on <code>clockResolutionName</code> which
-   * has to match any of the constants defined at {@link ClockResolution}
-   * 
-   * @param clockResolutionName
-   *          type of clock resolution to create
-   * @return a ClockResolution
-   */
-  public static ClockResolution createClockResolution(String clockResolutionName) {
-    if (clockResolutionName.equals(ClockResolution.SECONDS)) {
-      return new SecondsClockResolution();
-    } else if (clockResolutionName.equals(ClockResolution.MILLISECONDS)) {
-      return new MillisecondsClockResolution();
-    } else if (clockResolutionName.equals(ClockResolution.MICROSECONDS)) {
-      return new MicrosecondsClockResolution();
-    } else if (clockResolutionName.equals(ClockResolution.MICROSECONDS_SYNC)) {
-      return new MicrosecondsSyncClockResolution();
-    }
-    throw new RuntimeException(String.format(
-        "Unsupported clock resolution: %s", clockResolutionName));
-  }
 
 }

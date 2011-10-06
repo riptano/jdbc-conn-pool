@@ -6,14 +6,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.drivers.jdbc.pool.cassandra.exceptions.HectorException;
 import com.datastax.drivers.jdbc.pool.cassandra.service.ExceptionsTranslator;
 import com.datastax.drivers.jdbc.pool.cassandra.service.ExceptionsTranslatorImpl;
 import com.datastax.drivers.jdbc.pool.cassandra.service.FailoverPolicy;

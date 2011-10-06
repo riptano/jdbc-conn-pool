@@ -150,7 +150,7 @@ public class CassandraConnectionHandle implements Connection {
   @Override
   public void close() throws SQLException {
     releaseConnection();
-    isClosed  = true;
+    //isClosed  = true;
   }
 
   @Override

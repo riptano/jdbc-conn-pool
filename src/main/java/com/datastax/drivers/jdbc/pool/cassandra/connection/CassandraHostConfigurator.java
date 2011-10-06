@@ -1,10 +1,7 @@
 package com.datastax.drivers.jdbc.pool.cassandra.connection;
 
 import java.io.Serializable;
-import java.sql.SQLFeatureNotSupportedException;
 
-import com.datastax.drivers.jdbc.pool.cassandra.ClockResolution;
-import com.datastax.drivers.jdbc.pool.cassandra.factory.HFactory;
 import com.datastax.drivers.jdbc.pool.cassandra.service.ExhaustedPolicy;
 
 
@@ -41,7 +38,7 @@ public class CassandraHostConfigurator implements Serializable {
   private int retryDownedHostsDelayInSeconds = CassandraHostRetryService.DEF_RETRY_DELAY;
   
   private LoadBalancingPolicy loadBalancingPolicy = new RoundRobinBalancingPolicy();
-  public static final ClockResolution DEF_CLOCK_RESOLUTION = HFactory.createClockResolution(ClockResolution.MICROSECONDS_SYNC);
+
   private int hostTimeoutCounter = HostTimeoutTracker.DEF_TIMEOUT_COUNTER;
   private int hostTimeoutWindow = HostTimeoutTracker.DEF_TIMEOUT_WINDOW;
   private int hostTimeoutSuspensionDurationInSeconds = HostTimeoutTracker.DEF_NODE_SUSPENSION_DURATION_IN_SECONDS;

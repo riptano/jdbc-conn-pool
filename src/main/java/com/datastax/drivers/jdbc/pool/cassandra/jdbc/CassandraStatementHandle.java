@@ -36,6 +36,8 @@ public class CassandraStatementHandle implements Statement {
    */
   public void execute(Operation<?> op) throws SQLException {
     try {
+      // We do not retry for statement execution.
+      op.failoverPolicy = FailoverPolicy.FAIL_FAST;
       manager.operateWithFailover(op);
     } catch (SQLException e) {
       throw this.cassandraConnectionHandle.markPossiblyBroken(e);
