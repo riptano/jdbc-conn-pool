@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+  <!--
+  <bean class="org.springframework.jdbc.datasource.DriverManagerDataSource" id="ds">
+      <property name="driverClassName" value="org.apache.cassandra.cql.jdbc.CassandraDriver"/>
+      <property name="url" value="jdbc:cassandra://127.0.0.1:9160/TestCQL"/>
+      <property name="username" value="sa"/>
+      <property name="password" value=""/>
+  </bean>
+  -->
+
+  <bean class="com.datastax.drivers.jdbc.pool.cassandra.jdbc.HCQLDataSource" id="ds">
+      <property name="clusterName" value="TestCluster"/>
+      <property name="keyspaceName" value="default"/>
+      <property name="hosts" value="127.0.0.1:9170"/>
+      <property name="user" value=""/>
+      <property name="password" value=""/>
+  </bean>
+
+  <bean class="org.springframework.jdbc.core.JdbcTemplate" id="jdbcTemplate">
+      <constructor-arg ref="ds"/>
+  </bean>
+
+ 
+  <bean class="com.datastax.drivers.jdbc.pool.cassandra.dao.CassandraServiceImpl" id="cassandraService">
+      <property name="jdbcTemplate" ref="jdbcTemplate"/>
+  </bean>
+
+
+</beans>

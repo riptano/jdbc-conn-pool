@@ -1,0 +1,32 @@
+package com.datastax.drivers.jdbc.pool.cassandra;
+
+import com.datastax.drivers.jdbc.pool.cassandra.model.AllOneConsistencyLevelPolicy;
+import com.datastax.drivers.jdbc.pool.cassandra.model.QuorumAllConsistencyLevelPolicy;
+import com.datastax.drivers.jdbc.pool.cassandra.service.OperationType;
+
+/**
+ * Defines the interface for the consistency level policy.
+ * Implementations may create their own consistency level policies, such as
+ * {@link AllOneConsistencyLevelPolicy} or {@link QuorumAllConsistencyLevelPolicy}
+ *
+ * @author Ran Tavory
+ *
+ */
+public interface ConsistencyLevelPolicy {
+
+  /**
+   * Get the desired consistency level according to the operation type.
+   * @param op
+   * @return
+   */
+  HConsistencyLevel get(OperationType op);
+
+  /**
+   * Get desired consistency according to the operation type and column family name.
+   * @param op
+   * @param cfName
+   * @return
+   */
+  HConsistencyLevel get(OperationType op, String cfName);
+
+}

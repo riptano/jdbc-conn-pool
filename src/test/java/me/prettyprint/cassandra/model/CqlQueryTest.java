@@ -1,0 +1,93 @@
+package me.prettyprint.cassandra.model;
+
+import static com.datastax.drivers.jdbc.pool.cassandra.factory.HFactory.createColumn;
+import static com.datastax.drivers.jdbc.pool.cassandra.factory.HFactory.createKeyspace;
+import static com.datastax.drivers.jdbc.pool.cassandra.factory.HFactory.createMutator;
+import static com.datastax.drivers.jdbc.pool.cassandra.factory.HFactory.getOrCreateCluster;
+import static org.junit.Assert.assertEquals;
+
+import org.apache.cassandra.utils.ByteBufferUtil;
+import org.junit.Before;
+import org.junit.Test;
+
+import com.datastax.drivers.jdbc.pool.cassandra.BaseEmbededServerSetupTest;
+import com.datastax.drivers.jdbc.pool.cassandra.Keyspace;
+import com.datastax.drivers.jdbc.pool.cassandra.connection.Cluster;
+import com.datastax.drivers.jdbc.pool.cassandra.exceptions.HCassandraInternalException;
+import com.datastax.drivers.jdbc.pool.cassandra.exceptions.HInvalidRequestException;
+import com.datastax.drivers.jdbc.pool.cassandra.serializers.LongSerializer;
+import com.datastax.drivers.jdbc.pool.cassandra.serializers.StringSerializer;
+import com.datastax.drivers.jdbc.pool.hector.api.query.QueryResult;
+
+public class CqlQueryTest extends BaseEmbededServerSetupTest {
+  
+  private final static String KEYSPACE = "Keyspace1";
+  private static final StringSerializer se = new StringSerializer();
+  private static final LongSerializer le = new LongSerializer();
+  private Cluster cluster;
+  private Keyspace keyspace;
+  private String cf = "StandardLong1";
+  
+  @Before
+  public void setupCase() {
+    cluster = getOrCreateCluster("MyCluster", "127.0.0.1:9170");
+    keyspace = createKeyspace(KEYSPACE, cluster);
+    createMutator(keyspace, se)
+    .addInsertion("cqlQueryTest_key1", cf, createColumn("birthyear", 1974L, se, le))
+    .addInsertion("cqlQueryTest_key1", cf, createColumn("birthmonth", 4L, se, le))
+    .addInsertion("cqlQueryTest_key2", cf, createColumn("birthyear", 1975L, se, le))
+    .addInsertion("cqlQueryTest_key2", cf, createColumn("birthmonth", 4L, se, le))
+    .addInsertion("cqlQueryTest_key3", cf, createColumn("birthyear", 1975L, se, le))
+    .addInsertion("cqlQueryTest_key3", cf, createColumn("birthmonth", 5L, se, le))
+    .addInsertion("cqlQueryTest_key4", cf, createColumn("birthyear", 1975L, se, le))
+    .addInsertion("cqlQueryTest_key4", cf, createColumn("birthmonth", 6L, se, le))
+    .addInsertion("cqlQueryTest_key5", cf, createColumn("birthyear", 1975L, se, le))
+    .addInsertion("cqlQueryTest_key5", cf, createColumn("birthmonth", 7L, se, le))
+    .addInsertion("cqlQueryTest_key6", cf, createColumn("birthyear", 1976L, se, le))
+    .addInsertion("cqlQueryTest_key6", cf, createColumn("birthmonth", 6L, se, le))
+    .execute();
+  }
+  
+  @Test
+  public void testSimpleSelect() {
+    CqlQuery<String,String,Long> cqlQuery = new CqlQuery<String,String,Long>(keyspace, se, se, le);
+    cqlQuery.setQuery("select * from StandardLong1");
+    QueryResult<CqlRows<String,String,Long>> result = cqlQuery.execute();
+    assertEquals(6,result.get().getCount());
+    
+  }
+  
+  @Test
+  public void testCountQuery() {
+    CqlQuery<String,String,Long> cqlQuery = new CqlQuery<String,String,Long>(keyspace, se, se, le);
+    cqlQuery.setQuery("SELECT COUNT(*) FROM StandardLong1 WHERE KEY = 'cqlQueryTest_key1'");
+    QueryResult<CqlRows<String,String,Long>> result = cqlQuery.execute();
+    assertEquals(2, result.get().getAsCount());
+  }
+
+  @Test(expected=HCassandraInternalException.class)
+  public void testSyntaxFailQuery() {
+    CqlQuery<String,String,Long> cqlQuery = new CqlQuery<String,String,Long>(keyspace, se, se, le);
+    cqlQuery.setQuery("SELECT COUNT(*) FROM Standard1 WHERE KEY = 'cqlQueryTest_key1'");
+    QueryResult<CqlRows<String,String,Long>> result = cqlQuery.execute();
+
+  }
+  
+  @Test
+  public void testInsertSyntax() {
+    CqlQuery<String,String,Long> cqlQuery = new CqlQuery<String,String,Long>(keyspace, se, se, le);
+    cqlQuery.setQuery("update StandardLong1 set 'birthyear' = '1976' WHERE KEY = 'cqlQueryTest_key7'");
+    QueryResult<CqlRows<String,String,Long>> result = cqlQuery.execute();
+  }
+  
+  @Test
+  public void testInsertSyntaxHex() {
+    CqlQuery<String,String,Long> cqlQuery = new CqlQuery<String,String,Long>(keyspace, se, se, le);
+    String query = String.format("update Standard1 set '%s' = '%s' WHERE KEY = '%s'",
+        ByteBufferUtil.bytesToHex(se.toByteBuffer("birthyear")),
+        ByteBufferUtil.bytesToHex(se.toByteBuffer("1976")),
+        ByteBufferUtil.bytesToHex(se.toByteBuffer("mykey1")));
+    cqlQuery.setQuery(query);
+    QueryResult<CqlRows<String,String,Long>> result = cqlQuery.execute();
+  }
+}
