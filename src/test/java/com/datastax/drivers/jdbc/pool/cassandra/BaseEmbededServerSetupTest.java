@@ -47,4 +47,9 @@ public abstract class BaseEmbededServerSetupTest {
     embedded = null;
   }
 
+  protected void setupClient() {
+    cassandraHostConfigurator = new CassandraHostConfigurator("127.0.0.1:9170");
+    connectionManager = new HConnectionManager(clusterName, cassandraHostConfigurator);
+  }
+
 }
