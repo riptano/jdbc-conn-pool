@@ -11,7 +11,7 @@ import com.datastax.drivers.jdbc.pool.cassandra.AbstractBaseTest;
 
 public class CassandraServiceImplTest extends AbstractBaseTest {
     
-    private static String keySpace = "TestCQL";
+    private static String keySpace = "default";
     
     private CassandraService cassandraService;
     
