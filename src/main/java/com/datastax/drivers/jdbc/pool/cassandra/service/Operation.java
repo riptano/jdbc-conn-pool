@@ -99,6 +99,13 @@ public abstract class Operation<T> {
    * Performs the operation on the given cassandra instance.
    */
   public abstract T execute(CassandraConnectionHandle connection) throws SQLException;
+  
+  /**
+   * 
+   * @param connection
+   * @throws SQLException
+   */
+  public abstract void prepareForFailover(CassandraConnectionHandle newConnection) throws SQLException;
 
   public void executeAndSetResult(CassandraConnectionHandle connection) throws SQLException {
     final CassandraHost cassandraHost = connection.getCassandraHost();

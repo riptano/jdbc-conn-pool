@@ -14,7 +14,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 @RunWith(SpringJUnit4ClassRunner.class)
 //ApplicationContext will be loaded from "/applicationContext-test.xml" in the root of the classpath
 @ContextConfiguration({"/applicationContext-test.xml"})
-public class AbstractBaseTest extends BaseEmbededServerSetupTest{
+public abstract class AbstractBaseTest extends BaseEmbededServerSetupTest{
 
     @Autowired
     protected ApplicationContext ctx;

@@ -213,6 +213,11 @@ public class HConnectionManager {
       public CassandraConnectionHandle execute(CassandraConnectionHandle connection) throws SQLException {
         return connection;
       }
+
+      @Override
+      public void prepareForFailover(CassandraConnectionHandle connection) throws SQLException {
+        // NO-OP
+      }
     };
 
     this.operateWithFailover(op);
@@ -246,6 +251,9 @@ public class HConnectionManager {
           // Set the new connection
           op.setConnection(currentConnection);
         }
+        
+        if (!firstTime)
+          op.prepareForFailover(currentConnection);
 
         firstTime = false;
 

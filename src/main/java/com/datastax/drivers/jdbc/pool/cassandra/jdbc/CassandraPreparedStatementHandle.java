@@ -20,28 +20,53 @@ import java.sql.ResultSetMetaData;
 import java.sql.RowId;
 import java.sql.SQLException;
 import java.sql.SQLXML;
+import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Calendar;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.datastax.drivers.jdbc.pool.cassandra.connection.HConnectionManager;
+import com.datastax.drivers.jdbc.pool.cassandra.jdbc.proxy.Recordable;
+import com.datastax.drivers.jdbc.pool.cassandra.jdbc.proxy.Recorder;
 import com.datastax.drivers.jdbc.pool.cassandra.service.Operation;
 import com.datastax.drivers.jdbc.pool.cassandra.service.OperationType;
+import com.datastax.drivers.jdbc.pool.cassandra.utils.ReflectionUtils;
 
 
 /**
  * Wrapper around JDBC PreparedStatement.
  *
  */
-public class CassandraPreparedStatementHandle extends CassandraStatementHandle implements PreparedStatement {
+public class CassandraPreparedStatementHandle extends CassandraStatementHandle implements PreparedStatement, Recorder {
   
   /** Handle to the real prepared statement. */
   private PreparedStatement internalPreparedStatement;
+  private String sql;
   
   public CassandraPreparedStatementHandle(PreparedStatement internalPreparedStatement, HConnectionManager manager, 
-      CassandraConnectionHandle cassandraConnectionHandle) {
+      CassandraConnectionHandle cassandraConnectionHandle, String sql) {
     super(internalPreparedStatement, manager, cassandraConnectionHandle);
     this.internalPreparedStatement = internalPreparedStatement;
+    this.sql = sql;
+  }
+  
+  /**
+   * Handles the Statement replacement during a failover.
+   * @param stmRef reference to the current statement
+   * @param newConnection a new ConnectionHandle
+   * @throws SQLException 
+   */
+  private void getReadyforFailover(AtomicReference<PreparedStatement> stmRef, CassandraConnectionHandle newConnection) throws SQLException {
+    PreparedStatement newStm = newConnection.createInternalPrepareStatement(sql);
+
+    // Apply the recorded methods invocation onto the new statement.
+    this.applyInvocationsOn(newStm);
+    stmRef.get().close();
+    
+    internalPreparedStatement = newStm;
+    cassandraConnectionHandle = newConnection;
+    stmRef.set(newStm);
   }
 
   /**
@@ -80,12 +105,18 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    */
   @Override
   public boolean execute() throws SQLException {
-    final PreparedStatement stm = this.internalPreparedStatement;
+    final AtomicReference<PreparedStatement> stmRef = new AtomicReference<PreparedStatement>(this.internalPreparedStatement);
+    
     Operation<Boolean> op = new Operation<Boolean>(OperationType.CQL, this) {
 
       @Override
       public Boolean execute(CassandraConnectionHandle connection) throws SQLException {
-        return stm.execute();
+        return stmRef.get().execute();
+      }
+      
+      @Override
+      public void prepareForFailover(CassandraConnectionHandle newConnection) throws SQLException {
+        getReadyforFailover(stmRef, newConnection);
       }
     };
 
@@ -100,12 +131,17 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    */
   @Override
   public ResultSet executeQuery() throws SQLException {
-    final PreparedStatement stm = this.internalPreparedStatement;
+    final AtomicReference<PreparedStatement> stmRef = new AtomicReference<PreparedStatement>(this.internalPreparedStatement);
     Operation<ResultSet> op = new Operation<ResultSet>(OperationType.CQL, this) {
 
       @Override
       public ResultSet execute(CassandraConnectionHandle connection) throws SQLException {
-        return stm.executeQuery();
+        return stmRef.get().executeQuery();
+      }
+      
+      @Override
+      public void prepareForFailover(CassandraConnectionHandle newConnection) throws SQLException {
+        getReadyforFailover(stmRef, newConnection);
       }
     };
 
@@ -119,12 +155,17 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * @see java.sql.PreparedStatement#executeUpdate()
    */
   public int executeUpdate() throws SQLException {
-    final PreparedStatement stm = this.internalPreparedStatement;
+    final AtomicReference<PreparedStatement> stmRef = new AtomicReference<PreparedStatement>(this.internalPreparedStatement);
     Operation<Integer> op = new Operation<Integer>(OperationType.CQL, this) {
 
       @Override
       public Integer execute(CassandraConnectionHandle connection) throws SQLException {
-        return stm.executeUpdate();
+        return  stmRef.get().executeUpdate();
+      }
+      
+      @Override
+      public void prepareForFailover(CassandraConnectionHandle newConnection) throws SQLException {
+        getReadyforFailover(stmRef, newConnection);
       }
     };
 
@@ -165,6 +206,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setArray(int, java.sql.Array)
    */
+  @Recordable
   public void setArray(int parameterIndex, Array x) throws SQLException {
     checkClosed();
     try {
@@ -179,6 +221,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setAsciiStream(int, java.io.InputStream)
    */
+  @Recordable
   public void setAsciiStream(int parameterIndex, InputStream x) throws SQLException {
     checkClosed();
     try {
@@ -193,6 +236,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setAsciiStream(int, java.io.InputStream, int)
    */
+  @Recordable
   public void setAsciiStream(int parameterIndex, InputStream x, int length) throws SQLException {
     checkClosed();
     try {
@@ -207,6 +251,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setAsciiStream(int, java.io.InputStream, long)
    */
+  @Recordable
   public void setAsciiStream(int parameterIndex, InputStream x, long length) throws SQLException {
     checkClosed();
     try {
@@ -221,6 +266,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setBigDecimal(int, java.math.BigDecimal)
    */
+  @Recordable
   public void setBigDecimal(int parameterIndex, BigDecimal x) throws SQLException {
     checkClosed();
     try {
@@ -236,6 +282,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * @see java.sql.PreparedStatement#setBinaryStream(int, java.io.InputStream)
    */
   @Override
+  @Recordable
   public void setBinaryStream(int parameterIndex, InputStream x) throws SQLException {
     checkClosed();
     try {
@@ -250,6 +297,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setBinaryStream(int, java.io.InputStream, int)
    */
+  @Recordable
   public void setBinaryStream(int parameterIndex, InputStream x, int length) throws SQLException {
     checkClosed();
     try {
@@ -264,6 +312,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setBinaryStream(int, java.io.InputStream, long)
    */
+  @Recordable
   public void setBinaryStream(int parameterIndex, InputStream x, long length) throws SQLException {
     checkClosed();
     try {
@@ -278,6 +327,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setBlob(int, java.sql.Blob)
    */
+  @Recordable
   public void setBlob(int parameterIndex, Blob x) throws SQLException {
     checkClosed();
     try {
@@ -292,7 +342,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setBlob(int, java.io.InputStream)
    */
-  @Override
+  @Recordable
   public void setBlob(int parameterIndex, InputStream x) throws SQLException {
     checkClosed();
     try {
@@ -307,6 +357,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setBlob(int, java.io.InputStream, long)
    */
+  @Recordable
   public void setBlob(int parameterIndex, InputStream x, long length) throws SQLException {
     checkClosed();
     try {
@@ -321,7 +372,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setBoolean(int, boolean)
    */
-  @Override
+  @Recordable
   public void setBoolean(int parameterIndex, boolean x) throws SQLException {
     checkClosed();
     try {
@@ -336,7 +387,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setByte(int, byte)
    */
-  @Override
+  @Recordable
   public void setByte(int parameterIndex, byte x) throws SQLException {
     checkClosed();
     try {
@@ -351,6 +402,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setBytes(int, byte[])
    */
+  @Recordable
   public void setBytes(int parameterIndex, byte[] x) throws SQLException {
     checkClosed();
     try {
@@ -365,6 +417,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setCharacterStream(int, java.io.Reader)
    */
+  @Recordable
   public void setCharacterStream(int parameterIndex, Reader reader) throws SQLException {
     checkClosed();
     try {
@@ -379,6 +432,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setCharacterStream(int, java.io.Reader, int)
    */
+  @Recordable
   public void setCharacterStream(int parameterIndex, Reader reader, int lenght) throws SQLException {
     checkClosed();
     try {
@@ -393,6 +447,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setCharacterStream(int, java.io.Reader, long)
    */
+  @Recordable
   public void setCharacterStream(int parameterIndex, Reader reader, long length) throws SQLException {
     checkClosed();
     try {
@@ -407,6 +462,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setClob(int, java.sql.Clob)
    */
+  @Recordable
   public void setClob(int parameterIndex, Clob x) throws SQLException {
     checkClosed();
     try {
@@ -421,7 +477,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setClob(int, java.io.Reader)
    */
-  @Override
+  @Recordable
   public void setClob(int parameterIndex, Reader reader) throws SQLException {
     checkClosed();
     try {
@@ -436,6 +492,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setClob(int, java.io.Reader, long)
    */
+  @Recordable
   public void setClob(int parameterIndex, Reader reader, long length) throws SQLException {
     checkClosed();
     try {
@@ -450,6 +507,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setDate(int, java.sql.Date)
    */
+  @Recordable
   public void setDate(int parameterIndex, Date x) throws SQLException {
     checkClosed();
     try {
@@ -464,6 +522,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setDate(int, java.sql.Date, java.util.Calendar)
    */
+  @Recordable
   public void setDate(int parameterIndex, Date x, Calendar c) throws SQLException {
     checkClosed();
     try {
@@ -478,6 +537,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setDouble(int, double)
    */
+  @Recordable
   public void setDouble(int parameterIndex, double x) throws SQLException {
     checkClosed();
     try {
@@ -492,6 +552,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setFloat(int, float)
    */
+  @Recordable
   public void setFloat(int parameterIndex, float x) throws SQLException {
     checkClosed();
     try {
@@ -506,7 +567,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setInt(int, int)
    */
-  @Override
+  @Recordable
   public void setInt(int parameterIndex, int x) throws SQLException {
     checkClosed();
     try {
@@ -521,6 +582,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setLong(int, long)
    */
+  @Recordable
   public void setLong(int parameterIndex, long x) throws SQLException {
     checkClosed();
     try {
@@ -535,6 +597,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setNCharacterStream(int, java.io.Reader)
    */
+  @Recordable
   public void setNCharacterStream(int parameterIndex, Reader x) throws SQLException {
     checkClosed();
     try {
@@ -549,6 +612,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setNCharacterStream(int, java.io.Reader, long)
    */
+  @Recordable
   public void setNCharacterStream(int parameterIndex, Reader x, long length) throws SQLException {
     checkClosed();
     try {
@@ -563,6 +627,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setNClob(int, java.sql.NClob)
    */
+  @Recordable
   public void setNClob(int parameterIndex, NClob x) throws SQLException {
     checkClosed();
     try {
@@ -577,6 +642,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setNClob(int, java.io.Reader)
    */
+  @Recordable
   public void setNClob(int parameterIndex, Reader x) throws SQLException {
     checkClosed();
     try {
@@ -591,7 +657,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setNClob(int, java.io.Reader, long)
    */
-  @Override
+  @Recordable
   public void setNClob(int parameterIndex, Reader x, long length) throws SQLException {
     checkClosed();
     try {
@@ -606,7 +672,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setNString(int, java.lang.String)
    */
-  @Override
+  @Recordable
   public void setNString(int parameterIndex, String x) throws SQLException {
     checkClosed();
     try {
@@ -621,6 +687,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setNull(int, int)
    */
+  @Recordable
   public void setNull(int parameterIndex, int x) throws SQLException {
     checkClosed();
     try {
@@ -635,6 +702,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setNull(int, int, java.lang.String)
    */
+  @Recordable
   public void setNull(int parameterIndex, int x, String typeName) throws SQLException {
     checkClosed();
     try {
@@ -649,6 +717,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setObject(int, java.lang.Object)
    */
+  @Recordable
   public void setObject(int parameterIndex, Object x) throws SQLException {
     checkClosed();
     try {
@@ -663,7 +732,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setObject(int, java.lang.Object, int)
    */
-  @Override
+  @Recordable
   public void setObject(int parameterIndex, Object x, int targetSqlType) throws SQLException {
     checkClosed();
     try {
@@ -678,7 +747,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setObject(int, java.lang.Object, int, int)
    */
-  @Override
+  @Recordable
   public void setObject(int parameterIndex, Object x, int targetSqlType, int scaleOrLength) throws SQLException {
     checkClosed();
     try {
@@ -693,6 +762,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setRef(int, java.sql.Ref)
    */
+  @Recordable
   public void setRef(int parameterIndex, Ref x) throws SQLException {
     checkClosed();
     try {
@@ -707,6 +777,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setRowId(int, java.sql.RowId)
    */
+  @Recordable
   public void setRowId(int parameterIndex, RowId x) throws SQLException {
     checkClosed();
     try {
@@ -721,6 +792,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setSQLXML(int, java.sql.SQLXML)
    */
+  @Recordable
   public void setSQLXML(int parameterIndex, SQLXML xmlObject) throws SQLException {
     checkClosed();
     try {
@@ -735,6 +807,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setShort(int, short)
    */
+  @Recordable
   public void setShort(int parameterIndex, short x) throws SQLException {
     checkClosed();
     try {
@@ -749,6 +822,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setString(int, java.lang.String)
    */
+  @Recordable
   public void setString(int parameterIndex, String x) throws SQLException {
     checkClosed();
     try {
@@ -763,6 +837,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setTime(int, java.sql.Time)
    */
+  @Recordable
   public void setTime(int parameterIndex, Time x) throws SQLException {
     checkClosed();
     try {
@@ -777,7 +852,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setTime(int, java.sql.Time, java.util.Calendar)
    */
-  @Override
+  @Recordable
   public void setTime(int parameterIndex, Time x, Calendar cal) throws SQLException {
     checkClosed();
     try {
@@ -792,6 +867,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setTimestamp(int, java.sql.Timestamp)
    */
+  @Recordable
   public void setTimestamp(int parameterIndex, Timestamp x) throws SQLException {
     checkClosed();
     try {
@@ -806,6 +882,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setTimestamp(int, java.sql.Timestamp, java.util.Calendar)
    */
+  @Recordable
   public void setTimestamp(int parameterIndex, Timestamp x, Calendar cal) throws SQLException {
     checkClosed();
     try {
@@ -820,6 +897,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setURL(int, java.net.URL)
    */
+  @Recordable
   public void setURL(int parameterIndex, URL x) throws SQLException {
     checkClosed();
     try {
@@ -834,7 +912,7 @@ public class CassandraPreparedStatementHandle extends CassandraStatementHandle i
    * 
    * @see java.sql.PreparedStatement#setUnicodeStream(int, java.io.InputStream, int)
    */
-  @Override
+  @Recordable
   public void setUnicodeStream(int parameterIndex, InputStream x, int length) throws SQLException {
     checkClosed();
     try {
