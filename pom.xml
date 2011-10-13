@@ -23,8 +23,8 @@
     <!-- OSGi bundle properties -->
     <bundle.symbolicName>me.prettyprint.hector</bundle.symbolicName>
     <bundle.namespace>me.prettyprint</bundle.namespace>
-    <cassandra.version>1.0.0-rc1</cassandra.version>
-    <thrift.version>1.0.0-rc1</thrift.version>
+    <cassandra.version>1.0.0-rc2</cassandra.version>
+    <thrift.version>1.0.0-rc2</thrift.version>
     <cql.version>1.0.4-SNAPSHOT</cql.version>
     <org.springframework.version>3.0.5.RELEASE</org.springframework.version>
     <slf4j.version>1.6.1</slf4j.version>
@@ -190,7 +190,7 @@
     <dependency>
       <groupId>me.prettyprint</groupId>
       <artifactId>hector-test</artifactId>
-      <version>0.8.0-3-SNAPSHOT</version>
+      <version>1.0-1-SNAPSHOT</version>
       <scope>test</scope>
     </dependency>
    
