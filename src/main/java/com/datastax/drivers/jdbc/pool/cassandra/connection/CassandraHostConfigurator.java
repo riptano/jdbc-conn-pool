@@ -20,6 +20,7 @@ package com.datastax.drivers.jdbc.pool.cassandra.connection;
 import java.io.Serializable;
 
 import com.datastax.drivers.jdbc.pool.cassandra.service.ExhaustedPolicy;
+import com.datastax.drivers.jdbc.pool.cassandra.service.FailoverPolicy;
 
 
 
@@ -42,6 +43,7 @@ public class CassandraHostConfigurator implements Serializable {
   private int cassandraThriftSocketTimeout;
   private ExhaustedPolicy exhaustedPolicy;
   private boolean useThriftFramedTransport = CassandraHost.DEFAULT_USE_FRAMED_THRIFT_TRANSPORT;
+  private FailoverPolicy failoverPolicy = FailoverPolicy.ON_FAIL_TRY_ALL_AVAILABLE;
 
   // Discovery new hosts service.
   // TODO (patricioe) Cassandra does not support yet system calls. This feature uses describe_ring. CASSANDRA-2477
@@ -363,6 +365,22 @@ public class CassandraHostConfigurator implements Serializable {
 
   public void setClusterName(String clusterName) {
     this.clusterName = clusterName;
+  }
+
+  public FailoverPolicy getFailoverPolicy() {
+    return failoverPolicy;
+  }
+
+  public void setFailoverPolicy(FailoverPolicy failoverPolicy) {
+    this.failoverPolicy = failoverPolicy;
+  }
+  
+  public void setFailoverPolicy(String failoverPolicy) {
+    this.failoverPolicy = FailoverPolicy.valueOf(failoverPolicy);
+  }
+
+  public ExhaustedPolicy getExhaustedPolicy() {
+    return exhaustedPolicy;
   }
 
 }

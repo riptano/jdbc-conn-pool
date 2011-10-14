@@ -21,8 +21,8 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Map;
 
-import com.datastax.drivers.jdbc.pool.cassandra.connection.CassandraHost;
 import com.datastax.drivers.jdbc.pool.cassandra.connection.CassandraClientMonitor.Counter;
+import com.datastax.drivers.jdbc.pool.cassandra.connection.CassandraHost;
 import com.datastax.drivers.jdbc.pool.cassandra.exceptions.HectorException;
 import com.datastax.drivers.jdbc.pool.cassandra.jdbc.CassandraConnectionHandle;
 import com.datastax.drivers.jdbc.pool.cassandra.jdbc.CassandraStatementHandle;
@@ -47,7 +47,6 @@ public abstract class Operation<T> {
   /** The stopwatch used to measure operation performance */
   public final String stopWatchTagName;
 
-  public FailoverPolicy failoverPolicy = FailoverPolicy.ON_FAIL_TRY_ALL_AVAILABLE;
   public ConsistencyLevelPolicy consistencyLevelPolicy;
   
   public String keyspaceName;
@@ -74,23 +73,21 @@ public abstract class Operation<T> {
   }
 
   public Operation(OperationType operationType, Map<String, String> credentials) {
-    this(operationType, FailoverPolicy.ON_FAIL_TRY_ALL_AVAILABLE, null, credentials);
+    this(operationType, null, credentials);
   }
   
-  public Operation(OperationType operationType, FailoverPolicy failoverPolicy, String keyspaceName, Map<String, String> credentials) {
+  public Operation(OperationType operationType, String keyspaceName, Map<String, String> credentials) {
     this(operationType);
-    this.failoverPolicy = failoverPolicy;
     this.keyspaceName = keyspaceName;
     this.credentials = Collections.unmodifiableMap(credentials);
   }
   
   
   public void applyConnectionParams(String keyspace, ConsistencyLevelPolicy consistencyLevelPolicy,
-      FailoverPolicy failoverPolicy, Map<String,String> credentials) {
+      Map<String,String> credentials) {
     // TODO this is a first step. must be cleaned up.
     this.keyspaceName = keyspace;
     this.consistencyLevelPolicy = consistencyLevelPolicy;
-    this.failoverPolicy = failoverPolicy;
     this.credentials = credentials;
   }
 

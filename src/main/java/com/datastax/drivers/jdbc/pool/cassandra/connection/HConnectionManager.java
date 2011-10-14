@@ -59,6 +59,8 @@ public class HConnectionManager {
 
   private HOpTimer timer;
 
+  private FailoverPolicy failoverPolicy;
+
   public HConnectionManager(String clusterName, CassandraHostConfigurator cassandraHostConfigurator) {
     loadBalancingPolicy = cassandraHostConfigurator.getLoadBalancingPolicy();
     hostPools = new ConcurrentHashMap<CassandraHost, HClientPool>();
@@ -100,6 +102,7 @@ public class HConnectionManager {
     */
 
     timer = cassandraHostConfigurator.getOpTimer();
+    failoverPolicy = cassandraHostConfigurator.getFailoverPolicy();
   }
 
   /**
@@ -239,7 +242,7 @@ public class HConnectionManager {
 
   public void operateWithFailover(Operation<?> op) throws SQLException {
     final Object timerToken = timer.start(); 
-    int retries = Math.min(op.failoverPolicy.numRetries, hostPools.size());
+    int retries = Math.min(failoverPolicy.numRetries, hostPools.size());
     HClientPool pool = null;
     boolean success = false;
     boolean retryable = false;
