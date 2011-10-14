@@ -332,7 +332,7 @@ public class HConnectionManager {
         log.warn("Could not fullfill request on this host {}", pool.getCassandraHost());
         log.warn("Exception: ", ex);
         monitor.incCounter(Counter.SKIP_HOST_SUCCESS);
-        sleepBetweenHostSkips(op.failoverPolicy);
+        sleepBetweenHostSkips(failoverPolicy);
 
       } finally {
         --retries;
