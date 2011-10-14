@@ -17,7 +17,7 @@
  */
 package com.datastax.drivers.jdbc.pool.cassandra.jdbc;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -35,6 +35,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.datastax.drivers.jdbc.pool.cassandra.BaseEmbededServerSetupTest;
+import com.datastax.drivers.jdbc.pool.cassandra.connection.CassandraHostConfigurator;
+import com.datastax.drivers.jdbc.pool.cassandra.service.FailoverPolicy;
 
 
 public class HCQLDataSourceTest extends BaseEmbededServerSetupTest {
@@ -53,17 +55,33 @@ public class HCQLDataSourceTest extends BaseEmbededServerSetupTest {
   public void teardownCase() throws IOException {
     factory = null;
   }
-
+  
   @Test
-  public void getObjectInstance() throws Exception {
+  public void testSetFailoverPolicy() throws Exception {
     Reference resource = new Reference("HCQLDataSource");
-
     resource.add(new StringRefAddr("hosts", cassandraUrl));
     resource.add(new StringRefAddr("clusterName", clusterName));
     resource.add(new StringRefAddr("keyspace", "Keyspace1"));
     resource.add(new StringRefAddr("user", ""));
     resource.add(new StringRefAddr("password", ""));
-    
+    resource.add(new StringRefAddr("failoverPolicy", FailoverPolicy.FAIL_FAST.toString()));
+
+    Name jndiName = mock(Name.class);
+    Context context = new InitialContext();
+    Hashtable<String, String> environment = new Hashtable<String, String>();
+
+    CassandraHostConfigurator dataSource = (CassandraHostConfigurator) factory.getObjectInstance(resource, jndiName, context, environment);
+    assertEquals(FailoverPolicy.FAIL_FAST, dataSource.getFailoverPolicy());
+  }
+
+  @Test
+  public void getObjectInstance() throws Exception {
+    Reference resource = new Reference("HCQLDataSource");
+    resource.add(new StringRefAddr("hosts", cassandraUrl));
+    resource.add(new StringRefAddr("clusterName", clusterName));
+    resource.add(new StringRefAddr("keyspace", "Keyspace1"));
+    resource.add(new StringRefAddr("user", ""));
+    resource.add(new StringRefAddr("password", ""));
 
     Name jndiName = mock(Name.class);
     Context context = new InitialContext();
