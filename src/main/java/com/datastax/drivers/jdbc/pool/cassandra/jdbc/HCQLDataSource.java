@@ -39,11 +39,10 @@ import com.datastax.drivers.jdbc.pool.cassandra.connection.Cluster;
 import com.datastax.drivers.jdbc.pool.cassandra.factory.HFactory;
 
 /**
- * A factory for JNDI Resource managed objects. Responsible for creating a
- * {@link Keyspace} references for passing to {@link HFactory}. A limited set of
- * configuration parameters are supported. These parameters are defined in a web
- * application's context.xml file. Parameter descriptions can be found in
- * {@link CassandraHostConfigurator}
+ * A factory for JNDI Resource managed objects. Responsible for the cluster 
+ * and the pool of connections.
+ * A limited set of configuration parameters are supported. 
+ * Parameter descriptions can be found in {@link CassandraHostConfigurator}
  * 
  * <p>
  * 
@@ -59,6 +58,7 @@ import com.datastax.drivers.jdbc.pool.cassandra.factory.HFactory;
  *               clusterName="Test Cluster" 
  *               maxActive="20"
  *               maxWaitTimeWhenExhausted="10"
+ *               failoverPolicy=""FAIL_FAST | ON_FAIL_TRY_ONE_NEXT_AVAILABLE | ON_FAIL_TRY_ALL_AVAILABLE
  *               autoDiscoverHosts="true"
  *               runAutoDiscoveryAtStartup="true"/>
  * </pre>
@@ -260,6 +260,7 @@ public class HCQLDataSource extends CassandraHostConfigurator implements DataSou
         RefAddr autoDiscoverHosts = resourceRef.get("autoDiscoverHosts");
         RefAddr runAutoDiscoverAtStartup = resourceRef.get("runAutoDiscoveryAtStartup");
         RefAddr retryDownedHostDelayInSeconds = resourceRef.get("retryDownedHostDelayInSeconds");
+        RefAddr failoverPolicyRef = resourceRef.get("failoverPolicy");
 
         if (hostsRefAddr == null || hostsRefAddr.getContent() == null) {
             throw new Exception("A url and port on which Cassandra is installed and listening "
@@ -292,6 +293,9 @@ public class HCQLDataSource extends CassandraHostConfigurator implements DataSou
         //if (log.isDebugEnabled())
         //    log.debug("JNDI resource created with CassandraHostConfiguration: {}",
         //            cassandraHostConfigurator.getAutoDiscoverHosts());
+        
+        if (failoverPolicyRef != null)
+          this.setFailoverPolicy((String) failoverPolicyRef.getContent());
 
         this.setUser((String) userRef.getContent());
         this.setPassword((String) passwordRef.getContent());
