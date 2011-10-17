@@ -88,8 +88,16 @@
       <artifactId>apache-cassandra-cql</artifactId>
       <version>1.0.5-SNAPSHOT</version>	                   
     </dependency>
-    
+
   </dependencies>
 
-  
+    <repositories>
+        <repository>
+        <id>datastax</id>
+        <name>datastax</name>
+        <url>http://mvn.riptano.com/content/repositories/snapshots</url>
+    </repository>
+
+  </repositories>
+
 </project>
