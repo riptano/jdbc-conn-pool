@@ -48,6 +48,7 @@ public abstract class Operation<T> {
   public final String stopWatchTagName;
 
   public ConsistencyLevelPolicy consistencyLevelPolicy;
+  public FailoverPolicy failoverPolicy;
   
   public String keyspaceName;
 
