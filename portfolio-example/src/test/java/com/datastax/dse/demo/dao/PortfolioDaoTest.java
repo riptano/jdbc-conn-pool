@@ -16,6 +16,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import com.datastax.dse.demo.DemoBaseEmbededServerSetupTest;
 import com.datastax.dse.demo.domain.Portfolio;
+import com.datastax.dse.demo.domain.Position;
 import com.datastax.dse.demo.domain.Stock;
 import com.datastax.dse.demo.domain.StockHistory;
 
@@ -63,13 +64,26 @@ public class PortfolioDaoTest extends DemoBaseEmbededServerSetupTest {
     assertEquals(1, results.get(0).getPriceHistory().size());
   }
   
+  @Test
+  public void add_portfolio() {
+    Portfolio p1 = new Portfolio();
+    p1.setName("512");
+    Position position = new Position("GOOG", 576.28, 20);
+    p1.addToConstituents(position);
+    portfolioDao.saveOrUpdate(p1);
+    
+    Portfolio p2 = portfolioDao.loadPortfolio("512");
+    assertEquals("512", p2.getName());
+    
+  }
+  
   @Before
   public void setup() {
     insertTestData(PORTFOLIOS_INSERT);    
     insertTestData(STOCKS_INSERT);
     insertTestData(STOCKS_HIST);
   }
-  
+   
   
   private void insertTestData(String insert) {      
     jdbcTemplate.execute(insert);    

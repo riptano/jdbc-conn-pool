@@ -10,6 +10,7 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -17,6 +18,8 @@ import java.util.Map.Entry;
 import org.apache.cassandra.cql.jdbc.CassandraResultSet;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.utils.ByteBufferUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
@@ -37,6 +40,8 @@ import com.datastax.dse.demo.domain.StockHistory;
  */
 @Component
 public class PortfolioDao {
+  
+  private Logger log = LoggerFactory.getLogger(PortfolioDao.class);
   
   @Autowired
   private JdbcTemplate jdbcTemplate;
@@ -171,6 +176,23 @@ public class PortfolioDao {
       
     });
     return stocks;
+  }
+  
+  public void saveOrUpdate(final Portfolio portfolio) {
+    StringBuilder colNames = new StringBuilder();
+    StringBuilder colVals = new StringBuilder();  
+    for (Iterator<Position> iterator = portfolio.getConstituents().iterator(); iterator.hasNext();) {
+      Position pos = iterator.next();
+      colNames.append(pos.getTicker());
+      colVals.append(Long.toString(pos.getShares()));
+      if ( iterator.hasNext() ) {
+        colNames.append(",");
+        colVals.append(",");
+      }
+    }    
+    String statement = String.format("INSERT INTO Portfolios (KEY, %s) VALUES (%s,'%s')", colNames, portfolio.getName(), colVals);
+    log.debug("statement: {}", statement);
+    jdbcTemplate.execute(statement);
   }
 
   private StringBuilder appendKeys(String... tickers) {
