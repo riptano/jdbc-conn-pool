@@ -1,5 +1,8 @@
 package com.datastax.dse.demo.domain;
 
+import java.util.Locale;
+import java.text.NumberFormat;
+
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -11,7 +14,9 @@ public class Position {
   private String ticker = StringUtils.EMPTY;
   private double price;
   private long shares;
-  
+
+  private static NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(Locale.getDefault());
+
   public Position() {
     
   }
@@ -29,7 +34,11 @@ public class Position {
   public void setTicker(String ticker) {
     this.ticker = ticker;
   }
-  
+
+  public String getFormattedPrice() {
+    return currencyFormat.format(price);
+  }
+
   public double getPrice() {
     return price;
   }

@@ -3,8 +3,12 @@ package com.datastax.dse.demo.domain;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.Random;
+import java.util.Locale;
+
+import java.text.NumberFormat;
 
 /**
  * Portfolio holds Position objects with some historical information
@@ -21,6 +25,8 @@ public class Portfolio {
   private String largest10dayLossDate;
   private List<Double> histPrices;
 
+  private static NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(Locale.getDefault());
+
   public String getName() {
     return name;
   }
@@ -33,9 +39,21 @@ public class Portfolio {
     return new ArrayList<Position>(constituents.values());
   }
 
+  public Set<String> getTickers() {
+    if (constituents == null) return null;
+    return constituents.keySet();
+  }
   
+  public String getFormattedBasis() {
+    return currencyFormat.format(basis);
+  }
+
   public double getBasis() {
     return basis;
+  }
+
+  public String getFormattedPrice() {
+    return currencyFormat.format(price);
   }
 
   public double getPrice() {
